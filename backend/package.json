@@ -17,14 +17,14 @@
     "db:seed": "node scripts/seedData.js",
     "db:indexes": "node scripts/createIndexes.js",
     "admin:create": "node scripts/createAdmin.js",
-    "prod:start": "pm2 start ecosystem.config.js --env production",
-    "prod:stop": "pm2 stop campusgrid",
-    "prod:restart": "pm2 restart campusgrid",
-    "prod:reload": "pm2 reload campusgrid",
-    "prod:delete": "pm2 delete campusgrid",
-    "prod:logs": "pm2 logs campusgrid",
-    "prod:monit": "pm2 monit",
-    "prod:status": "pm2 status campusgrid"
+    "prod:start": "npx pm2 start ecosystem.config.js --env production",
+    "prod:stop": "npx pm2 stop campusgrid",
+    "prod:restart": "npx pm2 restart campusgrid",
+    "prod:reload": "npx pm2 reload campusgrid",
+    "prod:delete": "npx pm2 delete campusgrid",
+    "prod:logs": "npx pm2 logs campusgrid",
+    "prod:monit": "npx pm2 monit",
+    "prod:status": "npx pm2 status campusgrid"
   },
   "keywords": [
     "exam-platform",
@@ -73,6 +73,7 @@
   },
   "devDependencies": {
     "axios": "^1.6.0",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "pm2": "^5.4.3"
   }
 }

@@ -98,15 +98,10 @@ npm install
 - Zero-downtime reload
 - Built-in monitoring
 
-**Install PM2 globally**:
-```bash
-npm install -g pm2
+**PM2 Installation**:
+PM2 is already included as a dev dependency in the backend `package.json`. When you run `npm install` in the backend directory, PM2 will be installed locally for your project.
 
-# Verify installation
-pm2 --version
-```
-
-**PM2 is now installed!** You'll use it in production deployment.
+**No global installation needed!** All PM2 commands use `npx pm2` to run the local version.
 
 ### Step 5: Configure Environment Variables
 
@@ -582,12 +577,12 @@ npm --version
 ```
 
 **Step 2: Install PM2 (Process Manager)**
-```bash
-# Install PM2 globally
-sudo npm install -g pm2
 
-# Verify
-pm2 --version
+PM2 is included as a dev dependency in the backend. No global installation needed!
+
+```bash
+# PM2 will be installed when you run npm install in the backend directory
+# All PM2 commands use 'npx pm2' to run the local version
 ```
 
 **Step 3: Clone and Setup**
@@ -1170,7 +1165,7 @@ redis-cli ping                     # Test Redis
 ### Development Setup
 - [ ] Node.js installed (v18+)
 - [ ] MongoDB installed/configured
-- [ ] PM2 installed globally (`npm install -g pm2`)
+- [ ] PM2 installed locally (included in backend dev dependencies)
 - [ ] Redis installed (optional)
 - [ ] Backend dependencies installed (`npm install`)
 - [ ] Frontend dependencies installed (`npm install`)
@@ -1288,7 +1283,7 @@ ab -n 1000 -c 100 http://localhost:5000/api/health
 1. **Port already in use**: Change PORT in `.env`
 2. **Cannot connect to MongoDB**: Check connection string in `.env`
 3. **Redis connection failed**: Redis is optional, comment out in `.env`
-4. **PM2 not found**: Install globally `npm install -g pm2`
+4. **PM2 not found**: Run `npm install` in backend directory (PM2 is a dev dependency)
 5. **Tests failing**: Make sure server is running first
 
 ### Updates
