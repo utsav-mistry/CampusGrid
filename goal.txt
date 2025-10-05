@@ -1,0 +1,242 @@
+
+
+# 🎯 Phase-1 MVP Requirements
+
+### Project: **College Internship Cell Exam & Progress Platform**
+
+---
+
+## 1. 🎓 Core Purpose
+
+A secure, structured **exam & performance tracking system** for college internship cells.
+It measures **real skill**, discourages **grind/cheat behavior**, and rewards genuine high-performers using a **Badge, Star & Prestige** hierarchy.
+No AI or recruiter portal yet — this is a **fully working prototype** ready for internal demo and approval.
+
+---
+
+## 2. ⚙️ Core System Modules
+
+---
+
+### A. **Exam Engine (Central Module)**
+
+#### 🔹 Levels per Subject
+
+Each subject (Java, Python, DBMS, OS, JS, etc.) has **4 difficulty levels:**
+
+* Beginner
+* Intermediate
+* Advanced
+* Master
+
+Each exam is tied to one subject and one difficulty level.
+
+#### 🔹 Exam Mode Control
+
+* The **exam mode (Strict / Lenient)** is **set by recruiters or admin** when scheduling or approving the drive.
+* **Students cannot select the mode.**
+
+| Mode        | Set By          | Default Use                   | Description                                           |
+| ----------- | --------------- | ----------------------------- | ----------------------------------------------------- |
+| **Lenient** | System default  | All general or practice exams | 1 warning → then ban; allows minor tab switch grace   |
+| **Strict**  | Recruiter/Admin | For official lab drives       | 0 tolerance; tab switch or fullscreen exit = auto ban |
+
+#### 🔹 Enforcement Logic
+
+* **Fullscreen kiosk launch** (no navigation, no exit).
+* OS popup grace = **2 seconds**.
+* Warning/Ban rules depend on mode.
+* Auto submission on time expiry or rule breach.
+* Results auto-evaluated and saved.
+
+#### 🔹 Exam Data Logged
+
+For every attempt:
+
+* `exam_id`
+* `subject`
+* `level`
+* `mode` (strict/lenient)
+* `attempt_date`
+* `score_percentage`
+* `time_taken`
+* `violations`
+* `status` (Completed / Auto-Submitted / Banned)
+
+---
+
+### B. **Badge & Star System (Per Subject)**
+
+Each subject has 4 distinct badges (one per level):
+
+* **Beginner**, **Intermediate**, **Advanced**, **Master**
+
+Each badge has **⭐0 to ⭐10** star progression.
+
+#### 🧩 Star Progression Formula
+
+Stars depend on:
+
+1. **Number of valid exams completed** at that level
+2. **Average score percentage**
+
+| Stars | Exams (≥) | Avg. % (≥) |
+| ----- | --------- | ---------- |
+| ⭐1    | 3         | 60         |
+| ⭐3    | 6         | 70         |
+| ⭐5    | 10        | 80         |
+| ⭐7    | 15        | 85         |
+| ⭐10   | 20        | 90         |
+
+**Rules:**
+
+* Higher levels (Advanced, Master) require **fewer exams but higher percentages** (same thresholds, scaled).
+* After ⭐10, no further star growth (capped).
+* Low scorers with many attempts stay at lower stars.
+* High scorers progress faster.
+* Exam weighting purely within that level; independent across levels.
+* Badge obtained at ⭐1 unlock.
+
+---
+
+### C. **Prestige Ranking System (Cross-Level Normalisation)**
+
+Purpose: Allow fair comparison across levels.
+
+#### Weight Table:
+
+| Level        | Weight / Star | Max Points |
+| ------------ | ------------- | ---------- |
+| Beginner     | 1             | 10         |
+| Intermediate | 2             | 20         |
+| Advanced     | 3             | 30         |
+| Master       | 5             | 50         |
+
+also fill the rest of stars like from 1 to 10 all the stars
+
+**Prestige Formula:**
+
+```
+implement whatever feels best
+```
+
+
+This lets recruiters or cells easily compare a **grinder** (many beginner exams) vs a **high achiever** (few master exams).
+
+---
+
+### D. **Generic Milestone Badges (Soft Achievements)**
+
+These are *non-starred*, unlocked via global participation or behavior — not tied to difficulty or subject.
+
+| Badge                     | Requirement                              |
+| ------------------------- | ---------------------------------------- |
+| 🎯 *Exam Veteran*         | 100 total exams (any level)              |
+| 🧠 *Consistent Performer* | ≥ 85% average across 20 exams            |
+| 🔒 *Focus Keeper*         | 10 exams, zero violations in strict mode |
+| ⚡ *Quick Learner*         | 5 exams above 90% within 10 days         |
+| 🔥 *Streak Holder*        | 7-day consecutive activity               |
+
+These reward engagement and discipline but **do not affect prestige**.
+
+---
+
+### E. **Exam Level System (Two-Stage Control)**
+
+* **Stage 1 – Global Default:** All general exams = **Lenient Mode** (automatic).
+* **Stage 2 – Recruiter Drives:**
+  When internship drives or company tests are created, the **recruiter or admin** can flag the exam as:
+
+  * `"strict": true` → Strict policy enforced
+  * `"strict": false` → Lenient (default)
+
+This ensures fairness and control depending on context.
+
+---
+
+### F. **Student Dashboard**
+
+#### Tabs:
+
+1. **Exam Center**
+
+   * Lists subjects & levels.
+   * Displays whether exam is currently available (and mode info).
+   * General tests always lenient.
+
+2. **Progress Overview**
+
+   * Subject-wise badges + star count.
+   * Prestige score per subject (and total).
+   * Soft badges (milestones) visually separate.
+
+3. **Exam History**
+
+   * All attempts with filters (subject, level, date, mode).
+   * Charts: score trend, average %, violations.
+
+4. **Profile**
+
+   * Student details (branch, year, ID).
+   * Total prestige points.
+   * Summary of earned badges & stars.
+
+---
+
+### G. **Admin / Recruiter Portal**
+
+#### Controls:
+
+* Add/manage subjects and question pools (per level).
+* Schedule exams:
+
+  * Set **mode** (strict / lenient).
+  * Set duration & availability window.
+* Monitor live exams (status, warnings, violations).
+* View analytics:
+
+  * Student performance per level.
+  * Prestige ranking board.
+* Manage student accounts (approve, suspend, reset).
+
+---
+
+## 3. 🧩 System Rules Summary
+
+| Aspect            | Rule                                            |
+| ----------------- | ----------------------------------------------- |
+| Exam Mode         | Default = Lenient; recruiter can enforce Strict |
+| Stars             | 0–10 per level                                  |
+| Badges            | 1 per level per subject                         |
+| Prestige          | Weighted star system                            |
+| Generic Badges    | Global milestones                               |
+| Max Level         | Master                                          |
+| Star Cap          | ⭐10                                             |
+| Mode Change       | Only via admin/recruiter                        |
+| Score Threshold   | ≥ 60 % required to count                        |
+| Violations        | Depend on mode; instant or 1-warning ban        |
+| Fullscreen Policy | Required for all modes                          |
+| Kiosk Grace       | 2 sec OS popup                                  |
+
+---
+
+## 4. 🧠 Phase-1 MVP Target Deliverables
+
+✅ Fully functional **exam engine** (strict & lenient handling)
+✅ Subject/level-based **badge + star + prestige** logic
+✅ Student & Admin dashboards
+✅ Secure fullscreen enforcement
+✅ mongo
+✅ Configurable recruiter exam control
+✅ Clean UI, no AI dependency
+
+🚫 **Not included (later phases):**
+
+* Recruiter-facing public view
+* AI auto-tagging / recommendation
+* Mailing system
+* External integrations / deployment
+
+---
+
+for internship drives in out lj university, recruiters can add their own questions mcq, subjective, or code return based to score or eithyer select from question bank 

@@ -1,0 +1,213 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20;
+    @apply text-gray-900;
+    @apply font-sans;
+    @apply antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+    @apply tracking-tight;
+  }
+  
+  h1 {
+    @apply text-4xl font-bold;
+  }
+  
+  h2 {
+    @apply text-3xl font-bold;
+  }
+  
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+}
+
+@layer components {
+  /* Premium Button Styles */
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary-600 to-primary-500;
+    @apply text-white font-medium;
+    @apply px-6 py-3 rounded-xl;
+    @apply shadow-lg shadow-primary-500/30;
+    @apply hover:shadow-xl hover:shadow-primary-500/40;
+    @apply hover:scale-105;
+    @apply transition-all duration-300;
+    @apply focus:ring-4 focus:ring-primary-300;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-gray-700;
+    @apply px-6 py-3 rounded-xl;
+    @apply border-2 border-gray-200;
+    @apply hover:border-primary-300 hover:bg-primary-50;
+    @apply transition-all duration-300;
+    @apply shadow-soft;
+  }
+  
+  /* Premium Card Styles */
+  .card {
+    @apply bg-white rounded-2xl;
+    @apply shadow-soft;
+    @apply hover:shadow-xl;
+    @apply transition-all duration-300;
+    @apply border border-gray-100;
+  }
+  
+  .card-hover {
+    @apply card;
+    @apply hover:scale-105 hover:-translate-y-1;
+    @apply cursor-pointer;
+  }
+  
+  /* Premium Input Styles */
+  .input-premium {
+    @apply w-full px-4 py-3;
+    @apply border-2 border-gray-200;
+    @apply rounded-xl;
+    @apply focus:border-primary-500 focus:ring-4 focus:ring-primary-100;
+    @apply transition-all duration-300;
+    @apply bg-white;
+  }
+  
+  /* Badge Styles */
+  .badge {
+    @apply inline-flex items-center gap-1;
+    @apply px-3 py-1 rounded-full;
+    @apply text-sm font-medium;
+    @apply transition-all duration-300;
+  }
+  
+  /* Gradient Text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-accent-600;
+    @apply bg-clip-text text-transparent;
+  }
+  
+  /* Glass Effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-lg;
+    @apply border border-white/20;
+    @apply shadow-xl;
+  }
+  
+  .glass-dark {
+    @apply bg-gray-900/80 backdrop-blur-lg;
+    @apply border border-white/10;
+    @apply shadow-2xl;
+  }
+  
+  /* Modern Card Variants */
+  .card-gradient {
+    @apply bg-gradient-to-br from-white to-gray-50;
+    @apply shadow-soft;
+    @apply rounded-2xl;
+    @apply border border-gray-100;
+    @apply transition-all duration-300;
+  }
+  
+  .card-elevated {
+    @apply bg-white rounded-2xl;
+    @apply shadow-lg shadow-gray-200/50;
+    @apply hover:shadow-2xl hover:shadow-gray-300/50;
+    @apply transition-all duration-500;
+    @apply border border-gray-100;
+  }
+  
+  /* Floating Animation */
+  .float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  /* Shimmer Effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  /* Glow Effect */
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
+  }
+  
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(217, 70, 239, 0.4);
+  }
+  
+  /* Modern Input with Icon */
+  .input-group {
+    @apply relative;
+  }
+  
+  .input-group input {
+    @apply input-premium pl-12;
+  }
+  
+  .input-group .icon {
+    @apply absolute left-4 top-1/2 transform -translate-y-1/2;
+    @apply text-gray-400;
+  }
+  
+  /* Skeleton Loader */
+  .skeleton {
+    @apply bg-gray-200 rounded animate-pulse;
+  }
+  
+  /* Modern Badge Variants */
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-700;
+  }
+  
+  .badge-success {
+    @apply badge bg-green-100 text-green-700;
+  }
+  
+  .badge-warning {
+    @apply badge bg-amber-100 text-amber-700;
+  }
+  
+  .badge-gradient {
+    @apply badge bg-gradient-to-r from-primary-500 to-accent-500 text-white;
+  }
+}
+
+@layer utilities {
+  .animate-on-scroll {
+    @apply opacity-0 translate-y-4;
+    @apply transition-all duration-700;
+  }
+  
+  .animate-on-scroll.visible {
+    @apply opacity-100 translate-y-0;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

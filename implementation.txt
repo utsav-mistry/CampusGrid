@@ -1,0 +1,1090 @@
+# CampusGrid - Phase-1 MVP Implementation Plan
+
+## Executive Summary
+
+**Project:** College Internship Cell Exam & Progress Platform
+**Goal:** Build a secure exam system with skill-based progression (Badges, Stars, Prestige)
+**Tech Stack:** MERN (MongoDB, Express.js, React, Node.js)
+**Timeline:** Phase-1 MVP - FAST TRACK (Prototype Ready)
+**Question Types:** MCQ & Coding Only (No Subjective)
+**Email:** Brevo for OTP verification (6-digit)
+**Portals:** Student, Admin, Recruiter (All included)
+
+---
+
+## Technical Architecture
+
+### Tech Stack Breakdown
+
+#### Frontend
+- **Framework:** React 18+ with Vite
+- **UI Library:** shadcn/ui + Tailwind CSS
+- **Icons:** Lucide React
+- **State Management:** React Context API + React Query
+- **Routing:** React Router v6
+- **Forms:** React Hook Form + Zod validation
+- **Charts:** Recharts or Chart.js
+
+#### Backend
+- **Runtime:** Node.js 18+
+- **Framework:** Express.js
+- **Database:** MongoDB with Mongoose ODM
+- **Authentication:** JWT (JSON Web Tokens) + OTP verification
+- **Email Service:** Brevo (formerly Sendinblue) for OTP
+- **Security:** bcrypt, helmet, express-rate-limit
+- **Validation:** Zod or Joi
+- **Code Execution:** vm2 or isolated sandbox for code questions
+
+#### Exam Security
+- **Fullscreen API:** Browser Fullscreen API
+- **Tab Detection:** Visibility API + Focus/Blur events
+- **Anti-cheat:** Server-side time tracking, attempt logging
+- **Session Management:** Secure exam tokens with expiry
+
+---
+
+## Database Schema Design
+
+### Collections
+
+#### 1. **users**
+```javascript
+{
+  _id: ObjectId,
+  email: String (unique),
+  password: String (hashed),
+  isEmailVerified: Boolean (default: false),
+  role: Enum ["student", "admin", "recruiter"],
+  profile: {
+    name: String,
+    studentId: String (for students),
+    branch: String,
+    year: Number,
+    avatar: String (URL),
+    companyName: String (for recruiters),
+    designation: String (for recruiters)
+  },
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+#### 2. **subjects**
+```javascript
+{
+  _id: ObjectId,
+  name: String (e.g., "Java", "Python"),
+  code: String (e.g., "JAVA101"),
+  description: String,
+  isActive: Boolean,
+  createdAt: Date
+}
+```
+
+#### 3. **questions**
+```javascript
+{
+  _id: ObjectId,
+  subjectId: ObjectId (ref: subjects),
+  level: Enum ["Beginner", "Intermediate", "Advanced", "Master"],
+  type: Enum ["mcq", "code"], // ONLY MCQ and CODE
+  question: String,
+  
+  // For MCQ
+  options: [String] (for MCQ only),
+  correctAnswer: String (for MCQ - option index or text),
+  
+  // For CODE
+  codeTemplate: String (starter code),
+  language: String (e.g., "javascript", "python", "java"),
+  testCases: [
+    {
+      input: String/Object,
+      expectedOutput: String/Object,
+      isHidden: Boolean (hidden test cases for anti-cheat)
+    }
+  ],
+  
+  points: Number,
+  tags: [String],
+  createdBy: ObjectId (ref: users),
+  isPublic: Boolean (true = question bank, false = recruiter private),
+  createdAt: Date
+}
+```
+
+#### 4. **exams**
+```javascript
+{
+  _id: ObjectId,
+  title: String,
+  subjectId: ObjectId (ref: subjects),
+  level: Enum ["Beginner", "Intermediate", "Advanced", "Master"],
+  mode: Enum ["strict", "lenient"],
+  duration: Number (minutes),
+  totalMarks: Number,
+  passingPercentage: Number (default: 60),
+  questions: [ObjectId] (ref: questions),
+  availableFrom: Date,
+  availableTo: Date,
+  isActive: Boolean,
+  createdBy: ObjectId (ref: users),
+  examType: Enum ["general", "drive"], // general = always lenient
+  driveDetails: {
+    companyName: String,
+    description: String
+  },
+  createdAt: Date
+}
+```
+
+#### 5. **otpVerifications**
+```javascript
+{
+  _id: ObjectId,
+  email: String,
+  otp: String (6-digit, hashed),
+  purpose: Enum ["registration", "login", "password_reset"],
+  expiresAt: Date (5 minutes from creation),
+  attempts: Number (max 3),
+  isVerified: Boolean,
+  createdAt: Date
+}
+```
+
+#### 6. **examAttempts**
+```javascript
+{
+  _id: ObjectId,
+  examId: ObjectId (ref: exams),
+  studentId: ObjectId (ref: users),
+  subjectId: ObjectId (ref: subjects),
+  level: String,
+  mode: String,
+  startTime: Date,
+  endTime: Date,
+  timeTaken: Number (seconds),
+  answers: [
+    {
+      questionId: ObjectId,
+      answer: Mixed,
+      isCorrect: Boolean,
+      pointsEarned: Number
+    }
+  ],
+  totalScore: Number,
+  scorePercentage: Number,
+  violations: [
+    {
+      type: String (e.g., "tab_switch", "fullscreen_exit"),
+      timestamp: Date,
+      count: Number
+    }
+  ],
+  status: Enum ["in_progress", "completed", "auto_submitted", "banned"],
+  createdAt: Date
+}
+```
+
+#### 7. **studentProgress**
+```javascript
+{
+  _id: ObjectId,
+  studentId: ObjectId (ref: users, unique),
+  subjects: [
+    {
+      subjectId: ObjectId (ref: subjects),
+      levels: [
+        {
+          level: String,
+          badge: {
+            earned: Boolean,
+            earnedAt: Date
+          },
+          stars: Number (0-10),
+          examsCompleted: Number,
+          averageScore: Number,
+          prestigePoints: Number,
+          lastUpdated: Date
+        }
+      ]
+    }
+  ],
+  totalPrestige: Number,
+  genericBadges: [
+    {
+      badgeId: String,
+      name: String,
+      earnedAt: Date
+    }
+  ],
+  stats: {
+    totalExams: Number,
+    totalViolations: Number,
+    currentStreak: Number,
+    lastExamDate: Date
+  },
+  updatedAt: Date
+}
+```
+
+#### 8. **genericBadges** (Configuration)
+```javascript
+{
+  _id: ObjectId,
+  badgeId: String (unique),
+  name: String,
+  description: String,
+  icon: String,
+  requirement: {
+    type: String,
+    value: Mixed
+  }
+}
+```
+
+---
+
+## Core Logic Implementation
+
+### A. Star Progression Algorithm
+
+```javascript
+function calculateStars(level, examsCompleted, avgScore) {
+  // Base thresholds
+  const thresholds = [
+    { stars: 1, exams: 3, score: 60 },
+    { stars: 3, exams: 6, score: 70 },
+    { stars: 5, exams: 10, score: 80 },
+    { stars: 7, exams: 15, score: 85 },
+    { stars: 10, exams: 20, score: 90 }
+  ];
+  
+  // Scale for higher levels (fewer exams needed, higher scores required)
+  const levelMultipliers = {
+    "Beginner": { examScale: 1.0, scoreScale: 1.0 },
+    "Intermediate": { examScale: 0.8, scoreScale: 1.05 },
+    "Advanced": { examScale: 0.6, scoreScale: 1.1 },
+    "Master": { examScale: 0.5, scoreScale: 1.15 }
+  };
+  
+  const multiplier = levelMultipliers[level];
+  let stars = 0;
+  
+  for (let threshold of thresholds) {
+    const requiredExams = Math.ceil(threshold.exams * multiplier.examScale);
+    const requiredScore = threshold.score * multiplier.scoreScale;
+    
+    if (examsCompleted >= requiredExams && avgScore >= requiredScore) {
+      stars = threshold.stars;
+    } else {
+      break;
+    }
+  }
+  
+  return Math.min(stars, 10); // Cap at 10
+}
+```
+
+### B. Prestige Points Calculation
+
+```javascript
+function calculatePrestige(studentProgress) {
+  const weights = {
+    "Beginner": 1,
+    "Intermediate": 2,
+    "Advanced": 3,
+    "Master": 5
+  };
+  
+  let totalPrestige = 0;
+  
+  for (let subject of studentProgress.subjects) {
+    for (let levelData of subject.levels) {
+      const weight = weights[levelData.level];
+      const prestigeForLevel = levelData.stars * weight;
+      totalPrestige += prestigeForLevel;
+    }
+  }
+  
+  return totalPrestige;
+}
+```
+
+### C. Generic Badge Checker
+
+```javascript
+async function checkAndAwardGenericBadges(studentId) {
+  const progress = await StudentProgress.findOne({ studentId });
+  const attempts = await ExamAttempt.find({ 
+    studentId, 
+    status: "completed" 
+  });
+  
+  const badges = [];
+  
+  // Exam Veteran: 100 total exams
+  if (progress.stats.totalExams >= 100) {
+    badges.push({ badgeId: "exam_veteran", name: "Exam Veteran" });
+  }
+  
+  // Consistent Performer: ≥85% avg across 20 exams
+  const recentExams = attempts.slice(-20);
+  if (recentExams.length >= 20) {
+    const avg = recentExams.reduce((sum, a) => sum + a.scorePercentage, 0) / 20;
+    if (avg >= 85) {
+      badges.push({ badgeId: "consistent_performer", name: "Consistent Performer" });
+    }
+  }
+  
+  // Focus Keeper: 10 strict exams, zero violations
+  const strictExams = attempts.filter(a => 
+    a.mode === "strict" && a.violations.length === 0
+  );
+  if (strictExams.length >= 10) {
+    badges.push({ badgeId: "focus_keeper", name: "Focus Keeper" });
+  }
+  
+  // Quick Learner: 5 exams >90% within 10 days
+  const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+  const recentHighScores = attempts.filter(a => 
+    a.createdAt >= tenDaysAgo && a.scorePercentage > 90
+  );
+  if (recentHighScores.length >= 5) {
+    badges.push({ badgeId: "quick_learner", name: "Quick Learner" });
+  }
+  
+  // Streak Holder: 7-day consecutive activity
+  if (progress.stats.currentStreak >= 7) {
+    badges.push({ badgeId: "streak_holder", name: "Streak Holder" });
+  }
+  
+  return badges;
+}
+```
+
+### D. OTP Generation & Verification (Brevo Integration)
+
+```javascript
+const brevo = require('@sendinblue/client');
+
+async function sendOTP(email, purpose) {
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // Hash OTP before storing
+  const hashedOTP = await bcrypt.hash(otp, 10);
+  
+  // Store in database
+  await OTPVerification.create({
+    email,
+    otp: hashedOTP,
+    purpose,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+    attempts: 0,
+    isVerified: false
+  });
+  
+  // Send via Brevo
+  const apiInstance = new brevo.TransactionalEmailsApi();
+  apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+  
+  const sendSmtpEmail = {
+    to: [{ email }],
+    sender: { email: 'noreply@campusgrid.com', name: 'CampusGrid' },
+    subject: `Your CampusGrid OTP: ${otp}`,
+    htmlContent: `
+      <h2>CampusGrid Email Verification</h2>
+      <p>Your OTP is: <strong>${otp}</strong></p>
+      <p>Valid for 5 minutes.</p>
+      <p>If you didn't request this, please ignore.</p>
+    `
+  };
+  
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
+  return true;
+}
+
+async function verifyOTP(email, otp, purpose) {
+  const otpRecord = await OTPVerification.findOne({
+    email,
+    purpose,
+    isVerified: false,
+    expiresAt: { $gt: new Date() }
+  }).sort({ createdAt: -1 });
+  
+  if (!otpRecord) {
+    throw new Error('OTP expired or not found');
+  }
+  
+  if (otpRecord.attempts >= 3) {
+    throw new Error('Maximum attempts exceeded');
+  }
+  
+  otpRecord.attempts++;
+  await otpRecord.save();
+  
+  const isValid = await bcrypt.compare(otp, otpRecord.otp);
+  
+  if (isValid) {
+    otpRecord.isVerified = true;
+    await otpRecord.save();
+    return true;
+  }
+  
+  throw new Error('Invalid OTP');
+}
+```
+
+### E. Code Question Evaluation
+
+```javascript
+const vm = require('vm2');
+
+async function evaluateCodeQuestion(code, question) {
+  const results = [];
+  
+  for (let testCase of question.testCases) {
+    try {
+      // Create isolated sandbox
+      const sandbox = new vm.VM({
+        timeout: 5000, // 5 second timeout
+        sandbox: { input: testCase.input }
+      });
+      
+      // Execute code
+      const output = sandbox.run(code);
+      
+      // Compare output
+      const passed = JSON.stringify(output) === JSON.stringify(testCase.expectedOutput);
+      
+      results.push({
+        input: testCase.isHidden ? 'Hidden' : testCase.input,
+        expectedOutput: testCase.isHidden ? 'Hidden' : testCase.expectedOutput,
+        actualOutput: testCase.isHidden ? 'Hidden' : output,
+        passed
+      });
+    } catch (error) {
+      results.push({
+        input: testCase.isHidden ? 'Hidden' : testCase.input,
+        error: error.message,
+        passed: false
+      });
+    }
+  }
+  
+  const passedCount = results.filter(r => r.passed).length;
+  const totalCount = results.length;
+  const percentage = (passedCount / totalCount) * 100;
+  
+  return {
+    results,
+    passedCount,
+    totalCount,
+    percentage
+  };
+}
+```
+
+### F. Exam Violation Handler
+
+```javascript
+function handleViolation(examSession, violationType, mode) {
+  const violation = {
+    type: violationType,
+    timestamp: new Date(),
+    count: 1
+  };
+  
+  // Check existing violations of this type
+  const existingViolation = examSession.violations.find(v => v.type === violationType);
+  if (existingViolation) {
+    existingViolation.count++;
+    violation.count = existingViolation.count;
+  } else {
+    examSession.violations.push(violation);
+  }
+  
+  // Enforcement logic
+  if (mode === "strict") {
+    // Zero tolerance: immediate ban
+    examSession.status = "banned";
+    return { banned: true, warning: false };
+  } else {
+    // Lenient: 1 warning, then ban
+    if (violation.count === 1) {
+      return { banned: false, warning: true };
+    } else {
+      examSession.status = "banned";
+      return { banned: true, warning: false };
+    }
+  }
+}
+```
+
+---
+
+## Frontend Structure
+
+### Page Routes
+
+```
+/                           → Landing/Login
+/login                      → Student/Admin Login
+/register                   → Student Registration
+
+/student/dashboard          → Student Dashboard (Overview)
+/student/exam-center        → Available Exams List
+/student/exam/:id           → Exam Taking Interface (Fullscreen)
+/student/progress           → Badge & Star Progress
+/student/history            → Exam History & Analytics
+/student/profile            → Student Profile
+
+/admin/dashboard            → Admin Overview
+/admin/subjects             → Manage Subjects
+/admin/questions            → Question Bank Management
+/admin/exams                → Create/Schedule Exams
+/admin/students             → Student Management
+/admin/analytics            → Performance Analytics
+/admin/live-monitor         → Live Exam Monitoring
+
+/recruiter/dashboard        → Recruiter Dashboard
+/recruiter/drives           → Create Internship Drives
+/recruiter/questions        → Add Custom Questions
+/recruiter/analytics        → Drive Performance
+```
+
+### Key Components
+
+#### Student Side
+- **ExamCard** - Display exam info with mode badge
+- **BadgeDisplay** - Show badge with stars (animated)
+- **PrestigeScore** - Visual prestige indicator
+- **ExamInterface** - Fullscreen exam taking UI
+- **ViolationWarning** - Modal for warnings
+- **ProgressChart** - Score trends over time
+- **GenericBadgeGrid** - Milestone badges display
+
+#### Admin Side
+- **QuestionEditor** - MCQ/Code question creator (NO subjective)
+- **ExamScheduler** - Exam creation form with mode selector
+- **LiveExamMonitor** - Real-time exam status dashboard
+- **StudentRankingTable** - Prestige-based leaderboard
+- **AnalyticsDashboard** - Charts and insights
+
+#### Recruiter Side
+- **DriveCreator** - Create internship drive with exam
+- **QuestionSelector** - Select from question bank or add custom
+- **CustomQuestionForm** - Add MCQ/Code questions
+- **DriveAnalytics** - View student performance for drives
+- **StudentShortlist** - Filter and shortlist candidates
+
+---
+
+## Security Implementation
+
+### Exam Security Measures
+
+#### 1. Fullscreen Enforcement (Client-Side)
+```javascript
+// On exam start
+document.documentElement.requestFullscreen();
+
+// Monitor fullscreen changes
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    // Grace period: 2 seconds for OS popups
+    setTimeout(() => {
+      if (!document.fullscreenElement) {
+        reportViolation('fullscreen_exit');
+      }
+    }, 2000);
+  }
+});
+```
+
+#### 2. Tab Switch Detection
+```javascript
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    reportViolation('tab_switch');
+  }
+});
+
+window.addEventListener('blur', () => {
+  reportViolation('window_blur');
+});
+```
+
+#### 3. Server-Side Validation
+- Verify exam token on every answer submission
+- Track time server-side (don't trust client)
+- Validate answer format and question IDs
+- Auto-submit when time expires
+- Rate limiting on API endpoints
+
+#### 4. Authentication & Authorization
+- JWT tokens with 24-hour expiry
+- OTP-based email verification (Brevo)
+- Role-based access control (RBAC)
+- Secure password hashing (bcrypt, 10 rounds)
+- HTTPS only in production
+- CORS configuration
+
+---
+
+##   API Endpoints Design
+
+### Authentication & OTP
+```
+POST   /api/auth/register          - Student/Recruiter registration
+POST   /api/auth/send-otp          - Send OTP to email
+POST   /api/auth/verify-otp        - Verify OTP (6-digit)
+POST   /api/auth/login             - Login (all roles, requires verified email)
+POST   /api/auth/logout            - Logout
+GET    /api/auth/me                - Get current user
+POST   /api/auth/resend-otp        - Resend OTP
+```
+
+### Exams (Student)
+```
+GET    /api/exams                  - List available exams
+GET    /api/exams/:id              - Get exam details
+POST   /api/exams/:id/start        - Start exam (get token)
+POST   /api/exams/:id/submit       - Submit answer
+POST   /api/exams/:id/finish       - Finish exam
+POST   /api/exams/:id/violation    - Report violation
+```
+
+### Progress (Student)
+```
+GET    /api/progress               - Get student progress
+GET    /api/progress/history       - Exam attempt history
+GET    /api/progress/badges        - All badges & stars
+GET    /api/progress/prestige      - Prestige breakdown
+```
+
+### Admin - Subjects
+```
+GET    /api/admin/subjects         - List all subjects
+POST   /api/admin/subjects         - Create subject
+PUT    /api/admin/subjects/:id     - Update subject
+DELETE /api/admin/subjects/:id     - Delete subject
+```
+
+### Admin - Questions
+```
+GET    /api/admin/questions        - List questions (with filters)
+POST   /api/admin/questions        - Create question
+PUT    /api/admin/questions/:id    - Update question
+DELETE /api/admin/questions/:id    - Delete question
+GET    /api/admin/questions/bank   - Question bank for exam creation
+```
+
+### Admin - Exams
+```
+GET    /api/admin/exams            - List all exams
+POST   /api/admin/exams            - Create exam
+PUT    /api/admin/exams/:id        - Update exam
+DELETE /api/admin/exams/:id        - Delete exam
+GET    /api/admin/exams/:id/monitor - Live monitoring data
+```
+
+### Admin - Analytics
+```
+GET    /api/admin/analytics/overview     - System overview
+GET    /api/admin/analytics/leaderboard  - Prestige rankings
+GET    /api/admin/analytics/subject/:id  - Subject-wise performance
+```
+
+### Recruiter
+```
+GET    /api/recruiter/dashboard          - Recruiter dashboard stats
+POST   /api/recruiter/drives             - Create internship drive
+GET    /api/recruiter/drives             - List all drives
+GET    /api/recruiter/drives/:id         - Get drive details
+PUT    /api/recruiter/drives/:id         - Update drive
+DELETE /api/recruiter/drives/:id         - Delete drive
+POST   /api/recruiter/questions          - Add custom question (MCQ/Code)
+GET    /api/recruiter/questions          - List custom questions
+GET    /api/recruiter/questions/bank     - Browse public question bank
+GET    /api/recruiter/drives/:id/results - Drive results & analytics
+GET    /api/recruiter/drives/:id/students - Student list with scores
+POST   /api/recruiter/drives/:id/shortlist - Shortlist students
+```
+
+---
+
+## Development Phases (FAST TRACK - 4-5 Weeks)
+
+### Phase 1A: Foundation & Auth (Week 1)
+- [ ] Setup project structure (MERN boilerplate)
+- [ ] Database schema implementation (8 collections)
+- [ ] Brevo integration for OTP emails
+- [ ] Authentication system (JWT + OTP verification)
+- [ ] Basic routing (frontend - all 3 portals)
+- [ ] UI component library setup (shadcn/ui + Tailwind)
+- [ ] Role-based middleware (Student/Admin/Recruiter)
+
+### Phase 1B: Exam Engine & Questions (Week 2)
+- [ ] Question CRUD (MCQ & Code only)
+- [ ] Code execution sandbox (vm2)
+- [ ] Exam creation & scheduling
+- [ ] Exam taking interface (fullscreen)
+- [ ] Violation detection & handling
+- [ ] Auto-submission logic
+- [ ] MCQ auto-evaluation
+- [ ] Code test case evaluation
+
+### Phase 1C: Progress & Badge System (Week 3)
+- [ ] Badge & star calculation logic
+- [ ] Prestige point system
+- [ ] Generic badge checker
+- [ ] Progress dashboard UI (student)
+- [ ] History & analytics charts
+- [ ] Real-time progress updates
+
+### Phase 1D: Admin Portal (Week 3-4)
+- [ ] Subject management
+- [ ] Question bank interface (MCQ/Code)
+- [ ] Exam scheduler with mode control
+- [ ] Live exam monitoring
+- [ ] Student management (approve/suspend)
+- [ ] Analytics dashboard
+- [ ] Prestige leaderboard
+
+### Phase 1E: Recruiter Portal (Week 4)
+- [ ] Recruiter registration & verification
+- [ ] Drive creation interface
+- [ ] Custom question addition (MCQ/Code)
+- [ ] Question bank browsing & selection
+- [ ] Drive analytics & results
+- [ ] Student shortlisting feature
+- [ ] Export results (CSV/PDF)
+
+### Phase 1F: Testing & Deployment (Week 5)
+- [ ] UI/UX refinements
+- [ ] Security hardening
+- [ ] Performance optimization
+- [ ] End-to-end testing (all 3 portals)
+- [ ] Bug fixes
+- [ ] Basic documentation
+- [ ] Prototype demo preparation
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+- Badge & star calculation functions
+- Prestige calculation
+- Violation handling logic
+- Answer evaluation
+
+### Integration Tests
+- Exam flow (start → answer → submit → finish)
+- Progress update after exam completion
+- Badge awarding system
+
+### E2E Tests
+- Student exam taking journey
+- Admin exam creation flow
+- Violation scenarios
+
+### Security Tests
+- JWT token validation
+- Role-based access
+- SQL injection prevention (MongoDB)
+- XSS prevention
+
+---
+
+## Dependencies
+
+### Backend (package.json)
+```json
+{
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.10.0",
+    "zod": "^3.22.2",
+    "express-validator": "^7.0.1",
+    "@sendinblue/client": "^3.3.1",
+    "vm2": "^3.9.19",
+    "cookie-parser": "^1.4.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.6.4",
+    "supertest": "^6.3.3"
+  }
+}
+```
+
+### Frontend (package.json)
+```json
+{
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.15.0",
+    "react-query": "^3.39.3",
+    "axios": "^1.5.0",
+    "react-hook-form": "^7.46.1",
+    "zod": "^3.22.2",
+    "@hookform/resolvers": "^3.3.1",
+    "lucide-react": "^0.279.0",
+    "recharts": "^2.8.0",
+    "date-fns": "^2.30.0",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^1.14.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.4",
+    "vite": "^4.4.9",
+    "tailwindcss": "^3.3.3",
+    "autoprefixer": "^10.4.15",
+    "postcss": "^8.4.29"
+  }
+}
+```
+
+---
+
+## Deployment Considerations (Future)
+
+### Development
+- Local MongoDB instance
+- Node.js dev server
+- Vite dev server with HMR
+
+### Production (Phase 2+)
+- **Backend:** Render, Railway, or AWS EC2
+- **Frontend:** Vercel, Netlify, or AWS S3 + CloudFront
+- **Database:** MongoDB Atlas
+- **Environment Variables:** Secure storage
+- **SSL:** Required for fullscreen API
+
+---
+
+## Key Design Decisions
+
+### 1. **Mode Control**
+- Default: All general exams = Lenient
+- Recruiters/Admins can set Strict mode for drives
+- Students cannot change mode
+
+### 2. **Star Progression**
+- Scaled by level (harder levels need fewer exams, higher scores)
+- Capped at 10 stars per level
+- Only exams ≥60% count
+
+### 3. **Prestige Weighting**
+- Master level worth 5x Beginner
+- Encourages progression to harder levels
+- Fair comparison across students
+
+### 4. **Generic Badges**
+- Separate from prestige calculation
+- Reward engagement and discipline
+- Visual achievements for motivation
+
+### 5. **Violation Handling**
+- 2-second grace period for OS popups
+- Mode-dependent enforcement
+- Server-side logging for audit
+
+### 6. **Question Types (MCQ & Code ONLY)**
+- MCQ: Auto-evaluated instantly
+- Code: Test case validation (auto-evaluated with vm2 sandbox)
+- NO subjective questions in Phase 1
+
+### 7. **Email Verification (Brevo)**
+- 6-digit OTP sent via Brevo API
+- 5-minute expiry
+- Max 3 attempts per OTP
+- Required for registration and login
+
+### 8. **Recruiter Portal**
+- Full-featured portal included in Phase 1
+- Can create drives with custom/bank questions
+- View analytics and shortlist students
+- Export results functionality
+
+---
+
+## Known Limitations & Future Enhancements
+
+### Phase 1 Limitations
+- No AI-based recommendations
+- No subjective questions (MCQ & Code only)
+- No mobile app (web only)
+- Basic analytics (advanced ML insights in Phase 2)
+
+### Phase 2+ Enhancements
+- AI question tagging & difficulty prediction
+- Subjective question support with manual grading
+- Advanced email notifications (exam reminders, results)
+- Advanced analytics (ML-based insights)
+- Mobile app (React Native)
+- Video proctoring
+- Plagiarism detection for code
+- Integration with LMS platforms
+- Bulk student import (CSV)
+- Advanced reporting & exports
+
+---
+
+## UI/UX Guidelines
+
+### Design Principles
+- **Clean & Modern:** Minimal, professional interface
+- **Intuitive Navigation:** Clear hierarchy, breadcrumbs
+- **Responsive:** Mobile-first approach
+- **Accessible:** WCAG 2.1 AA compliance
+- **Performance:** Fast load times, optimized assets
+
+### Color Scheme (Suggested)
+- **Primary:** Blue (#3B82F6) - Trust, professionalism
+- **Success:** Green (#10B981) - Achievements, badges
+- **Warning:** Yellow (#F59E0B) - Violations, alerts
+- **Danger:** Red (#EF4444) - Bans, errors
+- **Neutral:** Gray scale for text & backgrounds
+
+### Typography
+- **Headings:** Inter or Poppins (bold, clear)
+- **Body:** Inter or System UI (readable)
+- **Code:** JetBrains Mono or Fira Code
+
+---
+
+## Success Metrics
+
+### Technical Metrics
+- **Uptime:** 99.5%+
+- **API Response Time:** <200ms (p95)
+- **Page Load Time:** <2s (p95)
+- **Zero Critical Security Vulnerabilities**
+
+### User Metrics
+- **Student Engagement:** Avg. 5+ exams/week
+- **Violation Rate:** <5% of exams
+- **Badge Completion:** 30%+ students earn ≥1 badge
+- **Admin Satisfaction:** Positive feedback on usability
+
+---
+
+## Configuration Files
+
+### .env (Backend)
+```
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/campusgrid
+JWT_SECRET=your_super_secret_key_change_in_production
+JWT_EXPIRE=24h
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173
+
+# Brevo (Sendinblue) Configuration
+BREVO_API_KEY=your_brevo_api_key_here
+BREVO_SENDER_EMAIL=noreply@campusgrid.com
+BREVO_SENDER_NAME=CampusGrid
+
+# Code Execution
+CODE_EXECUTION_TIMEOUT=5000
+MAX_CODE_LENGTH=10000
+```
+
+### .env (Frontend)
+```
+VITE_API_URL=http://localhost:5000/api
+VITE_APP_NAME=CampusGrid
+```
+
+---
+
+## Documentation Deliverables
+
+1. **README.md** - Project overview, setup instructions
+2. **API_DOCS.md** - Complete API reference
+3. **DEPLOYMENT.md** - Deployment guide
+4. **USER_GUIDE.md** - Student & admin user manual
+5. **DEVELOPER_GUIDE.md** - Code structure, conventions
+
+---
+
+## Definition of Done (Phase 1 MVP)
+
+- [ ] All core features implemented and tested
+- [ ] OTP email verification working (Brevo integration)
+- [ ] Student can register, verify email, and login
+- [ ] Student can take exams with fullscreen enforcement
+- [ ] MCQ questions auto-evaluated correctly
+- [ ] Code questions evaluated with test cases (vm2 sandbox)
+- [ ] Badge, star, and prestige system working correctly
+- [ ] Admin portal fully functional (subjects, questions, exams, analytics)
+- [ ] Recruiter portal fully functional (drives, custom questions, analytics)
+- [ ] Violation handling works for both modes (strict/lenient)
+- [ ] All 3 dashboards display accurate data
+- [ ] No critical bugs or security issues
+- [ ] Code is documented and clean
+- [ ] Prototype ready for demo
+
+---
+
+## Next Steps After Approval
+
+1. **Setup Development Environment**
+   - Initialize Git repository
+   - Create project structure
+   - Install dependencies
+
+2. **Database Setup**
+   - Install MongoDB locally
+   - Create initial schemas
+   - Seed sample data
+
+3. **Start Development**
+   - Begin with Phase 1A (Foundation)
+   - Follow iterative development approach
+   - Regular testing and code reviews
+
+---
+
+## Key Changes from Original Plan
+
+### ✅ INCLUDED in Phase 1 (Fast Track)
+1. **Email OTP Verification** - Brevo integration for 6-digit OTP
+2. **Recruiter Portal** - Full-featured portal with all capabilities
+3. **MCQ & Code Questions Only** - No subjective questions
+4. **Code Execution** - vm2 sandbox for safe code evaluation
+5. **All 3 Portals** - Student, Admin, Recruiter ready for prototype
+
+### ⏱️ Timeline Adjusted
+- **Original:** 8 weeks
+- **Fast Track:** 4-5 weeks (aggressive schedule for prototype)
+- **Focus:** Core features working, polished demo-ready UI
+
+### 🎯 Prototype Goals
+- Demonstrate complete exam flow (register → verify → take exam → results)
+- Show badge/star/prestige system working
+- Admin can manage everything
+- Recruiter can create drives and view results
+- Ready for stakeholder approval
+
+---
+
+**Estimated Timeline:** 4-5 weeks for Phase-1 MVP (Fast Track)
+**Team Size:** 1-2 developers (full-stack)
+**Complexity:** Medium-High
+**Priority:** Prototype ready for early submission
+
+---
+
+*This implementation plan is ready for review. Please approve or suggest changes.*
