@@ -1,4 +1,4 @@
-import SibApiV3Sdk from '@sendinblue/client';
+import nodemailer from 'nodemailer';
 import bcrypt from 'bcryptjs';
 import OTPVerification from '../models/OTPVerification.js';
 
@@ -11,7 +11,64 @@ const generateOTP = () => {
 };
 
 /**
- * Send OTP via Brevo (Sendinblue)
+ * Create email transporter (supports multiple providers)
+ * Supports: Brevo (Sendinblue), Gmail, SendGrid, or custom SMTP
+ */
+const createTransporter = () => {
+  // Option 1: Brevo (Sendinblue) SMTP
+  if (process.env.BREVO_SMTP_KEY) {
+    return nodemailer.createTransport({
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.BREVO_SMTP_USER || process.env.BREVO_SENDER_EMAIL,
+        pass: process.env.BREVO_SMTP_KEY
+      }
+    });
+  }
+  
+  // Option 2: Gmail
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+      }
+    });
+  }
+  
+  // Option 3: SendGrid
+  if (process.env.SENDGRID_API_KEY) {
+    return nodemailer.createTransport({
+      host: 'smtp.sendgrid.net',
+      port: 587,
+      auth: {
+        user: 'apikey',
+        pass: process.env.SENDGRID_API_KEY
+      }
+    });
+  }
+  
+  // Option 4: Custom SMTP
+  if (process.env.SMTP_HOST) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD
+      }
+    });
+  }
+  
+  throw new Error('No email service configured. Please set BREVO_SMTP_KEY, GMAIL credentials, SENDGRID_API_KEY, or SMTP settings in .env');
+};
+
+/**
+ * Send OTP via email using Nodemailer
  * @param {string} email - Recipient email
  * @param {string} purpose - Purpose of OTP
  * @returns {Promise<boolean>} - Success status
@@ -37,21 +94,18 @@ export const sendOTP = async (email, purpose) => {
       isVerified: false
     });
     
-    // Send via Brevo
-    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-    apiInstance.setApiKey(
-      SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey,
-      process.env.BREVO_API_KEY
-    );
+    // Create transporter
+    const transporter = createTransporter();
     
-    const sendSmtpEmail = {
-      to: [{ email }],
-      sender: {
-        email: process.env.BREVO_SENDER_EMAIL || 'noreply@campusgrid.com',
-        name: process.env.BREVO_SENDER_NAME || 'CampusGrid'
+    // Email options
+    const mailOptions = {
+      from: {
+        name: process.env.EMAIL_SENDER_NAME || 'CampusGrid',
+        address: process.env.EMAIL_SENDER_ADDRESS || process.env.BREVO_SENDER_EMAIL || 'noreply@campusgrid.com'
       },
+      to: email,
       subject: `Your CampusGrid OTP: ${otp}`,
-      htmlContent: `
+      html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -85,7 +139,8 @@ export const sendOTP = async (email, purpose) => {
       `
     };
     
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    // Send email
+    await transporter.sendMail(mailOptions);
     console.log(`✅ OTP sent to ${email} for ${purpose}`);
     return true;
     

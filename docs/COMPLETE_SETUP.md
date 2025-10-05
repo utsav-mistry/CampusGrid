@@ -145,12 +145,30 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-32-chars
 CORS_ORIGIN=http://localhost:5173
 
 # =============================================================================
-# EMAIL SERVICE (Brevo/Sendinblue)
+# EMAIL SERVICE (Choose one option)
 # =============================================================================
-# Get API key from: https://app.brevo.com/settings/keys/api
-BREVO_API_KEY=your_brevo_api_key_here
+# Option 1: Brevo (Sendinblue) SMTP - Get SMTP key from: https://app.brevo.com/settings/keys/smtp
+BREVO_SMTP_KEY=your_brevo_smtp_key_here
+BREVO_SMTP_USER=your_brevo_login_email
 BREVO_SENDER_EMAIL=noreply@campusgrid.com
-BREVO_SENDER_NAME=CampusGrid
+
+# Option 2: Gmail (requires App Password from Google Account settings)
+# GMAIL_USER=your_gmail@gmail.com
+# GMAIL_APP_PASSWORD=your_16_character_app_password
+
+# Option 3: SendGrid - Get API key from: https://app.sendgrid.com/settings/api_keys
+# SENDGRID_API_KEY=your_sendgrid_api_key
+
+# Option 4: Custom SMTP Server
+# SMTP_HOST=smtp.example.com
+# SMTP_PORT=587
+# SMTP_SECURE=false
+# SMTP_USER=your_smtp_username
+# SMTP_PASSWORD=your_smtp_password
+
+# Email Sender Information
+EMAIL_SENDER_NAME=CampusGrid
+EMAIL_SENDER_ADDRESS=noreply@campusgrid.com
 
 # =============================================================================
 # REDIS (Optional - for caching)

@@ -33,10 +33,22 @@ JWT_EXPIRE=24h
 NODE_ENV=development
 CORS_ORIGIN=http://localhost:5173
 
-# Brevo (Sendinblue) Configuration
-BREVO_API_KEY=your_brevo_api_key_here
+# Email Configuration (Choose one option)
+# Option 1: Brevo (Sendinblue) SMTP
+BREVO_SMTP_KEY=your_brevo_smtp_key
+BREVO_SMTP_USER=your_brevo_login_email
 BREVO_SENDER_EMAIL=noreply@campusgrid.com
-BREVO_SENDER_NAME=CampusGrid
+
+# Option 2: Gmail (requires App Password)
+# GMAIL_USER=your_gmail@gmail.com
+# GMAIL_APP_PASSWORD=your_app_password
+
+# Option 3: SendGrid
+# SENDGRID_API_KEY=your_sendgrid_api_key
+
+# Email Sender Info
+EMAIL_SENDER_NAME=CampusGrid
+EMAIL_SENDER_ADDRESS=noreply@campusgrid.com
 
 # Code Execution
 CODE_EXECUTION_TIMEOUT=5000

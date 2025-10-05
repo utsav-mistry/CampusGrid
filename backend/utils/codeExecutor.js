@@ -1,4 +1,3 @@
-import { VM } from 'vm2';
 import { spawn } from 'child_process';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
